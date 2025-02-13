@@ -46,7 +46,7 @@ export default function PackagesForm(){
 
     Papa.parse(file, {
       skipEmptyLines: true,
-      delimiter: ';', // Delimitador de CSV
+      delimitersToGuess: [',', ';'], // Delimitador de CSV
       complete: (results) => {
         // Aquí va un ejemplo si NO usamos 'header: true':
         const rawData: any[][] = results.data as any[][]
