@@ -46,30 +46,68 @@ export default function PackagesForm(){
 
     Papa.parse(file, {
       skipEmptyLines: true,
-      delimitersToGuess: [',', ';'], // Delimitador de CSV
+      delimitersToGuess: [',', ';'], // Detecta automáticamente el delimitador
       complete: (results) => {
-        // Aquí va un ejemplo si NO usamos 'header: true':
-        const rawData: any[][] = results.data as any[][]
+        const allRows = results.data as string[][]
 
-         // Buscamos la fila "Codigo"
-        const headerIndex = rawData.findIndex((row) => row[0] === 'Codigo')
-        const startIndex = headerIndex > -1 ? headerIndex : 0
+        // Buscar la fila que contiene los encabezados válidos
+        const headerIndex = allRows.findIndex(
+          (row) => row.includes('Codigo') && row.includes('Cliente')
+        )
 
-        // Resto de filas, ignorando la fila del encabezado
-        const dataRows = rawData.slice(startIndex + 1)
+        if (headerIndex === -1) {
+          setError('file', {
+            type: 'manual',
+            message: 'No se encontró la fila de encabezado (Codigo, Cliente...)',
+          })
+          return
+        }
 
-        // Mapeamos cada fila a un objeto CSVRowData
+        // Extraer encabezado y filas de datos
+        const headerRow = allRows[headerIndex]
+        const dataRows = allRows.slice(headerIndex + 1)
+
+        // Normalizar los encabezados (sin espacios, todo en minúscula)
+        const headers = headerRow.map((h) => h.trim().toLowerCase())
+
+        // Crear una función para obtener el índice por nombre de columna
+        const getIndex = (name: string) => headers.indexOf(name.toLowerCase())
+
+        // Validar que estén todas las columnas requeridas
+        const requiredCols = [
+          'codigo',
+          'cliente',
+          'servicio',
+          'destinatario',
+          'telefono',
+          'direccion',
+          'referencia',
+          'bultos',
+          'visita estimada',
+          'estado',
+        ]
+
+        const missing = requiredCols.filter((col) => getIndex(col) === -1)
+        if (missing.length > 0) {
+          setError('file', {
+            type: 'manual',
+            message: `Faltan columnas requeridas: ${missing.join(', ')}`,
+          })
+          return
+        }
+
+        // Mapear filas a objetos CSVRowData
         const parsedData: CSVRowData[] = dataRows.map((row) => ({
-          Codigo: row[0] || '',
-          Cliente: row[1] || '',
-          Servicio: row[2] || '',
-          Destinatario: row[3] || '',
-          Telefono: row[4] || '',
-          Direccion: row[5] || '',
-          Referencia: row[6] || '',
-          Bultos: row[7] || '',
-          VisitaEstimada: row[8] || '',
-          Estado: row[9] || '',
+          Codigo: row[getIndex('codigo')] || '',
+          Cliente: row[getIndex('cliente')] || '',
+          Servicio: row[getIndex('servicio')] || '',
+          Destinatario: row[getIndex('destinatario')] || '',
+          Telefono: row[getIndex('telefono')] || '',
+          Direccion: row[getIndex('direccion')] || '',
+          Referencia: row[getIndex('referencia')] || '',
+          Bultos: row[getIndex('bultos')] || '',
+          VisitaEstimada: row[getIndex('visita estimada')] || '',
+          Estado: row[getIndex('estado')] || '',
           timeRange: data.timeRange,
         }))
 
@@ -81,6 +119,7 @@ export default function PackagesForm(){
         console.error('Error parseando CSV:', err)
       },
     })
+
   }
 
   /**
