@@ -13,6 +13,7 @@ import {
   Paper,
   Button,
 } from '@mui/material'
+import { templates } from '../../data/templates'
 
 /**
  * Retorna un saludo según la hora actual:
@@ -34,6 +35,7 @@ export default function PackagesTable() {
   // Para llevar control de qué filas han sido notificadas
   // Clave: índice de la fila, Valor: boolean
   const [notified, setNotified] = useState<Record<number, boolean>>({})
+  const [blocked, setBlocked] = useState<Record<number, boolean>>({})
 
   // Si NO hay datos, muestra el mensaje de error y botón para cargar paquetes
   if (!csvData || csvData.length === 0) {
@@ -77,21 +79,21 @@ export default function PackagesTable() {
    * Construye el link de WhatsApp con el mensaje personalizado.
    * @param row Fila de la tabla (CSVRowData).
    */
+    // 🧠 Generador de link con plantilla aleatoria
   const buildWhatsappLink = (row: CSVRowData): string => {
-    // Ej. row.VisitaEstimada = "10", row.timeRange = 2 => "12"
-    const timeRangeStr = buildTimeRangeString(row.VisitaEstimada, row.timeRange)
     const saludo = getGreeting()
+    const timeRangeStr = buildTimeRangeString(row.VisitaEstimada, row.timeRange)
+    const plantilla = templates[Math.floor(Math.random() * templates.length)]
 
-    // Mensaje según el enunciado
-    const message = `${saludo} ${row.Destinatario} como estas? Te escribimos de Siempre Logistica por tu envio de ${
-      row.Cliente
-    }. Llegaremos mañana a ${row.Direccion} entre las ${timeRangeStr}.
-Que termines muy bien tu dia!`
+    // 🧠 Reemplazamos manualmente las variables dentro del texto
+    const message = plantilla
+      .replace(/\$\{row\.Destinatario\}/g, row.Destinatario)
+      .replace(/\$\{row\.Cliente\}/g, row.Cliente)
+      .replace(/\$\{row\.Direccion\}/g, row.Direccion)
+      .replace(/\$\{timeRangeStr\}/g, timeRangeStr)
+      .replace(/\$\{saludo\}/g, saludo)
 
-    // Teléfono sin el "+"
-    const telefono = row.Telefono.replace(/\+/g, '')
-
-    // Codifica el texto en formato URL
+    const telefono = row.Telefono.replace(/\D/g, '') // limpia todo menos dígitos
     return `https://wa.me/${telefono}?text=${encodeURIComponent(message)}`
   }
 
@@ -101,10 +103,13 @@ Que termines muy bien tu dia!`
    * @param index Índice de la fila en la tabla
    */
   const handleNotify = (index: number) => {
-    setNotified((prev) => ({
-      ...prev,
-      [index]: true,
-    }))
+    setNotified((prev) => ({ ...prev, [index]: true }))
+    setBlocked((prev) => ({ ...prev, [index]: true })) // bloquea link
+
+    // 🔒 desbloquear después de 1 minuto
+    setTimeout(() => {
+      setBlocked((prev) => ({ ...prev, [index]: false }))
+    }, 60_000)
   }
 
   return (
@@ -135,7 +140,8 @@ Que termines muy bien tu dia!`
         </TableHead>
         <TableBody>
           {csvData.map((row, index) => {
-            const isNotified = !!notified[index]
+            const isNotified = notified[index]
+            const isBlocked = blocked[index]
 
             return (
               <TableRow key={index}>
@@ -151,21 +157,19 @@ Que termines muy bien tu dia!`
                 <TableCell>{row.Estado}</TableCell>
                 <TableCell>
                   {isNotified ? (
-                    <Button color="secondary" >
-                      Notificado
-                    </Button>
+                    <Button color="secondary">Notificado</Button>
                   ) : (
                     <Button
                       variant="contained"
-                      color="primary"
+                      color={isBlocked ? 'secondary' : 'primary'}
                       onClick={() => handleNotify(index)}
-                      // Al hacer clic, abrimos el link de WhatsApp en otra pestaña
-                      component="a"
-                      href={buildWhatsappLink(row)}
-                      target="_blank"
+                      component={isBlocked ? 'button' : 'a'}
+                      href={isBlocked ? undefined : buildWhatsappLink(row)}
+                      target={isBlocked ? undefined : '_blank'}
                       rel="noopener noreferrer"
+                      disabled={isBlocked}
                     >
-                      Notificar
+                      {isBlocked ? 'Esperando...' : 'Notificar'}
                     </Button>
                   )}
                 </TableCell>

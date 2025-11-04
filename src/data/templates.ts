@@ -1,0 +1,20 @@
+export const templates = [
+  "Hola ${row.Destinatario}, ${saludo}! Te escribimos de Siempre Logística por tu envío de ${row.Cliente}. Pasaremos mañana por ${row.Direccion} entre las ${timeRangeStr}. ¡Gracias por elegirnos!",
+  "${saludo} ${row.Destinatario}, ¿cómo estás? Somos Siempre Logística. Mañana estaremos en ${row.Direccion} entre ${timeRangeStr} por tu envío de ${row.Cliente}.",
+  "¡${saludo}! ${row.Destinatario}, te contactamos de Siempre Logística. Entregaremos tu pedido de ${row.Cliente} mañana en ${row.Direccion}, entre las ${timeRangeStr}.",
+  "${saludo} ${row.Destinatario}! Queríamos avisarte que mañana llevaremos tu envío de ${row.Cliente} a ${row.Direccion}, entre ${timeRangeStr}.",
+  "${saludo}, ${row.Destinatario}. De parte de Siempre Logística te avisamos que mañana estaremos en ${row.Direccion}, entre ${timeRangeStr}, con tu paquete de ${row.Cliente}.",
+  "Hola ${row.Destinatario}, te saluda Siempre Logística. Mañana pasaremos por ${row.Direccion} entre ${timeRangeStr} para entregarte tu pedido de ${row.Cliente}.",
+  "${saludo} ${row.Destinatario}, ¿todo bien? Te avisamos que mañana estaremos en ${row.Direccion}, entre ${timeRangeStr}, entregando tu envío de ${row.Cliente}.",
+  "Buenas ${saludo.toLowerCase()} ${row.Destinatario}, desde Siempre Logística te informamos que mañana llevaremos tu pedido de ${row.Cliente} a ${row.Direccion}, entre ${timeRangeStr}.",
+  "${saludo} ${row.Destinatario}! Te escribimos de Siempre Logística. Mañana pasaremos por ${row.Direccion}, entre ${timeRangeStr}, para entregar tu envío de ${row.Cliente}.",
+  "${saludo} ${row.Destinatario}. Tu envío de ${row.Cliente} está programado para mañana en ${row.Direccion}, entre ${timeRangeStr}. ¡Gracias por tu paciencia!",
+  "${saludo}! Te saluda Siempre Logística. ${row.Destinatario}, mañana estaremos en ${row.Direccion} entre ${timeRangeStr} para entregarte el envío de ${row.Cliente}.",
+  "Hola ${row.Destinatario}! Te escribimos de Siempre Logística para avisarte que mañana llevaremos tu pedido de ${row.Cliente} a ${row.Direccion}, entre ${timeRangeStr}.",
+  "${saludo}, ${row.Destinatario}. Mañana visitaremos ${row.Direccion} entre ${timeRangeStr} con tu entrega de ${row.Cliente}. ¡Que tengas un excelente día!",
+  "Te saludamos desde Siempre Logística, ${row.Destinatario}. Mañana entre ${timeRangeStr} estaremos en ${row.Direccion} con tu paquete de ${row.Cliente}.",
+  "${saludo}! ${row.Destinatario}, mañana pasaremos por ${row.Direccion}, entre ${timeRangeStr}, con tu pedido de ${row.Cliente}. ¡Nos vemos pronto!",
+  "${saludo} ${row.Destinatario}! Queremos avisarte que mañana llegará tu envío de ${row.Cliente} a ${row.Direccion}, entre ${timeRangeStr}.",
+  "${saludo} ${row.Destinatario}, te escribimos desde Siempre Logística para avisarte que mañana entregaremos tu pedido de ${row.Cliente} en ${row.Direccion}, entre ${timeRangeStr}.",
+  "Hola ${row.Destinatario}! Te avisamos que mañana estaremos en ${row.Direccion}, entre ${timeRangeStr}, con tu paquete de ${row.Cliente}. ¡Saludos de Siempre Logística!"
+]
