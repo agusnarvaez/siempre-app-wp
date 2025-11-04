@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { CSVContext, CSVRowData } from '../../context/CSVContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -35,7 +35,24 @@ export default function PackagesTable() {
   // Para llevar control de qué filas han sido notificadas
   // Clave: índice de la fila, Valor: boolean
   const [notified, setNotified] = useState<Record<number, boolean>>({})
-  const [blocked, setBlocked] = useState<Record<number, boolean>>({})
+  const [blocked, setBlocked] = useState(false)
+  const [remaining, setRemaining] = useState(0)
+
+  // efecto para disminuir el contador cada segundo
+  useEffect(() => {
+    if (!blocked || remaining <= 0) return
+    const interval = setInterval(() => {
+      setRemaining(prev => {
+        if (prev <= 1) {
+          setBlocked(false)
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [blocked, remaining])
 
   // Si NO hay datos, muestra el mensaje de error y botón para cargar paquetes
   if (!csvData || csvData.length === 0) {
@@ -49,30 +66,16 @@ export default function PackagesTable() {
     )
   }
 
+
   function buildTimeRangeString(visitaEstimada: string, timeRange: number): string {
-    const [hh, mm] = visitaEstimada.split(':');
-
-    const hours = parseInt(hh, 10);
-    const mins = parseInt(mm, 10);
-
-    // Si no es un formato válido, retornamos la hora “tal cual”
-    if (isNaN(hours) || isNaN(mins)) {
-      return `${visitaEstimada} a ${visitaEstimada}`;
-    }
-
-    // Pasamos todo a minutos
-    const startTotalMinutes = hours * 60 + mins;
-    // Sumar timeRange horas en minutos
-    const endTotalMinutes = startTotalMinutes + timeRange * 60;
-
-    const endHours = Math.floor(endTotalMinutes / 60);
-    const endMinutes = endTotalMinutes % 60;
-
-    // Formateamos con cero a la izquierda si minutos < 10
-    const endHoursStr = endHours.toString().padStart(2, '0');
-    const endMinutesStr = endMinutes.toString().padStart(2, '0');
-
-    return `${visitaEstimada} a ${endHoursStr}:${endMinutesStr}`;
+    const [hh, mm] = visitaEstimada.split(':')
+    const hours = parseInt(hh, 10)
+    const mins = parseInt(mm, 10)
+    if (isNaN(hours) || isNaN(mins)) return `${visitaEstimada} a ${visitaEstimada}`
+    const endTotalMinutes = hours * 60 + mins + timeRange * 60
+    const endHoursStr = Math.floor(endTotalMinutes / 60).toString().padStart(2, '0')
+    const endMinutesStr = (endTotalMinutes % 60).toString().padStart(2, '0')
+    return `${visitaEstimada} a ${endHoursStr}:${endMinutesStr}`
   }
 
   /**
@@ -103,13 +106,12 @@ export default function PackagesTable() {
    * @param index Índice de la fila en la tabla
    */
   const handleNotify = (index: number) => {
-    setNotified((prev) => ({ ...prev, [index]: true }))
-    setBlocked((prev) => ({ ...prev, [index]: true })) // bloquea link
+    // marcar notificado solo para esa fila
+    setNotified(prev => ({ ...prev, [index]: true }))
 
-    // 🔒 desbloquear después de 1 minuto
-    setTimeout(() => {
-      setBlocked((prev) => ({ ...prev, [index]: false }))
-    }, 60_000)
+    // activar bloqueo global por 60s
+    setBlocked(true)
+    setRemaining(60)
   }
 
   return (
@@ -141,8 +143,6 @@ export default function PackagesTable() {
         <TableBody>
           {csvData.map((row, index) => {
             const isNotified = notified[index]
-            const isBlocked = blocked[index]
-
             return (
               <TableRow key={index}>
                 <TableCell>{row.Codigo}</TableCell>
@@ -161,15 +161,17 @@ export default function PackagesTable() {
                   ) : (
                     <Button
                       variant="contained"
-                      color={isBlocked ? 'secondary' : 'primary'}
-                      onClick={() => handleNotify(index)}
-                      component={isBlocked ? 'button' : 'a'}
-                      href={isBlocked ? undefined : buildWhatsappLink(row)}
-                      target={isBlocked ? undefined : '_blank'}
+                      color={blocked ? 'secondary' : 'primary'}
+                      onClick={() => !blocked && handleNotify(index)}
+                      component={blocked ? 'button' : 'a'}
+                      href={blocked ? undefined : buildWhatsappLink(row)}
+                      target={blocked ? undefined : '_blank'}
                       rel="noopener noreferrer"
-                      disabled={isBlocked}
+                      disabled={blocked}
                     >
-                      {isBlocked ? 'Esperando...' : 'Notificar'}
+                      {blocked
+                        ? `Esperando (${remaining}s)`
+                        : 'Notificar'}
                     </Button>
                   )}
                 </TableCell>
