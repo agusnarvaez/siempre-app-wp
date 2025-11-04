@@ -110,7 +110,15 @@ Que termines muy bien tu dia!`
   return (
     <TableContainer component={Paper} >
       <Table>
-        <TableHead sx={{ backgroundColor: '#f0f0f0' }}>
+        <TableHead sx={{
+        backgroundColor: '#2b2b2b', // fondo más oscuro
+        '& .MuiTableCell-root': {
+          color: '#ffffff', // texto blanco
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          borderBottom: '2px solid #f15a24', // línea inferior naranja
+        },
+      }}>
           <TableRow>
             <TableCell>Código</TableCell>
             <TableCell>Cliente</TableCell>
