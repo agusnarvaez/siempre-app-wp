@@ -42,7 +42,17 @@
   height: 100%;
   object-fit: contain;
   object-position: center;
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out;
 }
+.main-header img:hover{
+  transform: scale(1.1);
+}
+
+.main-header img:active{
+  transform: scale(0.9);
+}
+
 
 .main-content{
   padding: 3%;
