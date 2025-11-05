@@ -109,9 +109,9 @@ export default function PackagesTable() {
     // marcar notificado solo para esa fila
     setNotified(prev => ({ ...prev, [index]: true }))
 
-    // activar bloqueo global por 60s
+    // activar bloqueo global por 5s
     setBlocked(true)
-    setRemaining(60)
+    setRemaining(5)
   }
 
   return (
