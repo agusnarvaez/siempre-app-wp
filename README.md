@@ -1,6 +1,7 @@
 ![logo-siempre](<./src/assets/logos/logo-siempre.png>)
 # Gestión de avisos Siempre :package: :truck:
 [![QA](https://github.com/agusnarvaez/siempre-app-wp/actions/workflows/qa.yml/badge.svg)](https://github.com/agusnarvaez/siempre-app-wp/actions/workflows/qa.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/agusnarvaez/siempre-app-wp/qa.yml?branch=main&label=build)](https://github.com/agusnarvaez/siempre-app-wp/actions/workflows/qa.yml)
 [![codecov](https://codecov.io/gh/agusnarvaez/siempre-app-wp/branch/main/graph/badge.svg)](https://codecov.io/gh/agusnarvaez/siempre-app-wp)
 
 ## Descripción :page_facing_up:
