@@ -1,14 +1,15 @@
 
-import { useContext, useRef } from 'react'
-import Papa from 'papaparse'
+import { useContext, useRef, useState } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
-import { CSVContext, CSVRowData } from '../../context/CSVContext'
+import { CSVContext } from '../../context/CSVContext'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 // importar botón de material
 import Button from '@mui/material/Button'
-import { TextField } from '@mui/material'
+import { Alert, CircularProgress, TextField } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { parseCSVRows } from '../../utils/csvParser'
+import { parseCSVFile } from '../../utils/papaParser'
 
 
 // Definimos el tipo de datos para el form
@@ -21,6 +22,7 @@ export default function PackagesForm(){
   const { setCSVData } = useContext(CSVContext)
   const navigate = useNavigate()
   const hiddenFileInput = useRef<HTMLInputElement | null>(null) // Referencia al input de tipo "file"
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const {
     register,
@@ -32,94 +34,50 @@ export default function PackagesForm(){
   } = useForm<FormData>()
 
   // Extraemos las props del registro de "file"
-  const fileRegister = register('file', {
-    required: 'El archivo CSV es obligatorio',
-  })
+  const fileRegister = register('file')
 
   // "Escuchamos" qué archivo está seleccionado (si hay alguno)
   const watchedFile = watch('file') // Devuelve un FileList o undefined
 
   // Manejo de submit del formulario
-  const onSubmit: SubmitHandler<FormData> = (data) => {
-    if (!data.file || data.file.length === 0) return
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
+    if (!data.file || data.file.length === 0) {
+      setError('file', {
+        type: 'manual',
+        message: 'El archivo CSV es obligatorio',
+      })
+      return
+    }
     const file = data.file[0]
+    setIsProcessing(true)
 
-    Papa.parse(file, {
-      skipEmptyLines: true,
-      delimitersToGuess: [',', ';'], // Detecta automáticamente el delimitador
-      complete: (results) => {
-        const allRows = results.data as string[][]
+    try {
+      const allRows = await parseCSVFile(file)
+      const parsedResult = parseCSVRows(allRows, data.timeRange)
 
-        // Buscar la fila que contiene los encabezados válidos
-        const headerIndex = allRows.findIndex(
-          (row) => row.includes('Codigo') && row.includes('Cliente')
-        )
+      if ('error' in parsedResult) {
+        setError('file', {
+          type: 'manual',
+          message: parsedResult.error,
+        })
+        return
+      }
 
-        if (headerIndex === -1) {
-          setError('file', {
-            type: 'manual',
-            message: 'No se encontró la fila de encabezado (Codigo, Cliente...)',
-          })
-          return
-        }
-
-        // Extraer encabezado y filas de datos
-        const headerRow = allRows[headerIndex]
-        const dataRows = allRows.slice(headerIndex + 1)
-
-        // Normalizar los encabezados (sin espacios, todo en minúscula)
-        const headers = headerRow.map((h) => h.trim().toLowerCase())
-
-        // Crear una función para obtener el índice por nombre de columna
-        const getIndex = (name: string) => headers.indexOf(name.toLowerCase())
-
-        // Validar que estén todas las columnas requeridas
-        const requiredCols = [
-          'codigo',
-          'cliente',
-          'servicio',
-          'destinatario',
-          'telefono',
-          'direccion',
-          'referencia',
-          'bultos',
-          'visita estimada',
-          'estado',
-        ]
-
-        const missing = requiredCols.filter((col) => getIndex(col) === -1)
-        if (missing.length > 0) {
-          setError('file', {
-            type: 'manual',
-            message: `Faltan columnas requeridas: ${missing.join(', ')}`,
-          })
-          return
-        }
-
-        // Mapear filas a objetos CSVRowData
-        const parsedData: CSVRowData[] = dataRows.map((row) => ({
-          Codigo: row[getIndex('codigo')] || '',
-          Cliente: row[getIndex('cliente')] || '',
-          Servicio: row[getIndex('servicio')] || '',
-          Destinatario: row[getIndex('destinatario')] || '',
-          Telefono: row[getIndex('telefono')] || '',
-          Direccion: row[getIndex('direccion')] || '',
-          Referencia: row[getIndex('referencia')] || '',
-          Bultos: row[getIndex('bultos')] || '',
-          VisitaEstimada: row[getIndex('visita estimada')] || '',
-          Estado: row[getIndex('estado')] || '',
-          timeRange: data.timeRange,
-        }))
-
-        setCSVData(parsedData)
-        console.log(parsedData)
-        navigate('/tabla-de-paquetes')
-      },
-      error: (err) => {
-        console.error('Error parseando CSV:', err)
-      },
-    })
-
+      setCSVData(parsedResult.data)
+      navigate('/tabla-de-paquetes', {
+        state: {
+          missingVisitCount: parsedResult.missingVisitCount,
+        },
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error desconocido'
+      setError('file', {
+        type: 'manual',
+        message: `Error parseando CSV: ${message}`,
+      })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   /**
@@ -186,6 +144,7 @@ export default function PackagesForm(){
 
       {/* Input oculto */}
       <input
+        id="file-input"
         type="file"
         accept=".csv"
         style={{ display: 'none' }}
@@ -207,7 +166,7 @@ export default function PackagesForm(){
 
       {/* Mensaje de error si no sube archivo */}
       {errors.file && (
-        <p style={{ color: 'red' }}>{errors.file.message}</p>
+        <Alert severity="error">{errors.file.message}</Alert>
       )}
 
       {/* Botón para procesar el archivo CSV */}
@@ -215,13 +174,16 @@ export default function PackagesForm(){
         variant="contained"
         type="button"
         onClick={handleClickOpenFile}
+        aria-label="Cargar archivo CSV"
       >
         <UploadFileIcon /> Cargar archivo CSV
       </Button>
 
       {/* Botón para "avanzar": se hace submit normal,
           pero podrías cambiar la lógica según necesites */}
-      <Button disabled={!isFileLoaded} type="submit">Avanzar <NavigateNextIcon /></Button>
+      <Button disabled={!isFileLoaded || isProcessing} type="submit" aria-label="Procesar CSV y continuar">
+        {isProcessing ? <CircularProgress size={20} color="inherit" /> : <>Avanzar <NavigateNextIcon /></>}
+      </Button>
     </form>
   )
 }

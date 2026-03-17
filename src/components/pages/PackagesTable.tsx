@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { CSVContext, CSVRowData } from '../../context/CSVContext'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 // Material UI
 import {
@@ -13,6 +13,9 @@ import {
   Paper,
   Button,
   Stack,
+  Snackbar,
+  Alert,
+  TextField,
 } from '@mui/material'
 import { MessageCategory } from '../../data/templates'
 import {
@@ -24,6 +27,7 @@ import {
   getRemainingCooldownMs,
   registerMessageSent,
 } from '../../services/messageCooldown'
+import { isValidEstimatedVisit } from '../../utils/csvParser'
 
 /**
  * Retorna un saludo según la hora actual:
@@ -39,15 +43,22 @@ function getGreeting(): string {
 }
 
 export default function PackagesTable() {
-  const { csvData } = useContext(CSVContext)
+  const { csvData, setCSVData } = useContext(CSVContext)
   const navigate = useNavigate()
+  const location = useLocation()
   const postSaleCooldownHours = 24
+  const missingVisitCountFromForm = Number(location.state?.missingVisitCount || 0)
 
   // Para llevar control de qué filas han sido notificadas
   // Clave: índice de la fila, Valor: boolean
   const [notified, setNotified] = useState<Record<number, { aviso: boolean; posventa: boolean }>>({})
   const [blocked, setBlocked] = useState(false)
   const [remaining, setRemaining] = useState(0)
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({
+    open: false,
+    message: '',
+  })
+  const [visitDraftByIndex, setVisitDraftByIndex] = useState<Record<number, string>>({})
 
   // efecto para disminuir el contador cada segundo
   useEffect(() => {
@@ -134,6 +145,15 @@ export default function PackagesTable() {
 
   const handleSendMessage = (row: CSVRowData, index: number, category: MessageCategory) => {
     if (blocked) return
+
+    if (!isValidEstimatedVisit(row.VisitaEstimada)) {
+      setSnackbar({
+        open: true,
+        message: 'Completa primero la visita estimada para poder enviar mensajes.',
+      })
+      return
+    }
+
     const postSaleRecordKey = `${row.Codigo}:${index}`
 
     if (category === 'posventa') {
@@ -145,6 +165,10 @@ export default function PackagesTable() {
     const link = buildWhatsappLink(row, category)
     window.open(link, '_blank', 'noopener,noreferrer')
     handleNotify(index, category)
+    setSnackbar({
+      open: true,
+      message: category === 'aviso' ? 'Aviso listo para enviar en WhatsApp' : 'Posventa listo para enviar en WhatsApp',
+    })
   }
 
   const getCooldownLabel = (row: CSVRowData, index: number): string | null => {
@@ -155,8 +179,42 @@ export default function PackagesTable() {
     return `Posventa en ${hoursLeft}h`
   }
 
+  const saveVisitEstimated = (index: number) => {
+    const draft = (visitDraftByIndex[index] || '').trim()
+    if (!isValidEstimatedVisit(draft)) {
+      setSnackbar({
+        open: true,
+        message: 'El horario debe tener formato HH:MM (24hs).',
+      })
+      return
+    }
+
+    const [h, m] = draft.split(':')
+    const normalized = `${h.padStart(2, '0')}:${m}`
+
+    setCSVData((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, VisitaEstimada: normalized } : row)),
+    )
+
+    setVisitDraftByIndex((prev) => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+
+    setSnackbar({
+      open: true,
+      message: `Horario guardado para ${normalized}.`,
+    })
+  }
+
   return (
-    <TableContainer component={Paper} >
+    <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
+      {missingVisitCountFromForm > 0 && (
+        <Alert severity="warning" sx={{ m: 2 }}>
+          Se cargaron {missingVisitCountFromForm} registros sin horario valido. Debes completar la visita estimada antes de enviar mensajes.
+        </Alert>
+      )}
       <Table>
         <TableHead sx={{
         backgroundColor: '#2b2b2b', // fondo más oscuro
@@ -186,6 +244,7 @@ export default function PackagesTable() {
             const status = notified[index] ?? { aviso: false, posventa: false }
             const cooldownLabel = getCooldownLabel(row, index)
             const isPostSaleBlocked = cooldownLabel !== null
+            const hasValidVisit = isValidEstimatedVisit(row.VisitaEstimada)
             return (
               <TableRow key={index}>
                 <TableCell>{row.Codigo}</TableCell>
@@ -196,7 +255,31 @@ export default function PackagesTable() {
                 <TableCell>{row.Direccion}</TableCell>
                 <TableCell>{row.Referencia}</TableCell>
                 <TableCell>{row.Bultos}</TableCell>
-                <TableCell>{row.VisitaEstimada}</TableCell>
+                <TableCell>
+                  {hasValidVisit ? row.VisitaEstimada : (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder="HH:MM"
+                        value={visitDraftByIndex[index] ?? ''}
+                        onChange={(e) =>
+                          setVisitDraftByIndex((prev) => ({
+                            ...prev,
+                            [index]: e.target.value,
+                          }))
+                        }
+                        inputProps={{ maxLength: 5 }}
+                      />
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => saveVisitEstimated(index)}
+                      >
+                        Guardar
+                      </Button>
+                    </Stack>
+                  )}
+                </TableCell>
                 <TableCell>{row.Estado}</TableCell>
                 <TableCell>
                   <Stack direction="column" spacing={1}>
@@ -207,18 +290,26 @@ export default function PackagesTable() {
                         variant="contained"
                         color={blocked ? 'secondary' : 'primary'}
                         onClick={() => handleSendMessage(row, index, 'aviso')}
-                        disabled={blocked}
+                        disabled={blocked || !hasValidVisit}
+                        aria-label={`Notificar paquete ${row.Codigo}`}
                       >
-                        {blocked ? `Esperando (${remaining}s)` : 'Notificar'}
+                        {!hasValidVisit ? 'Completar horario' : blocked ? `Esperando (${remaining}s)` : 'Notificar'}
                       </Button>
                     )}
                     <Button
                       variant="outlined"
                       color="warning"
                       onClick={() => handleSendMessage(row, index, 'posventa')}
-                      disabled={blocked || isPostSaleBlocked || status.posventa}
+                      disabled={blocked || isPostSaleBlocked || status.posventa || !hasValidVisit}
+                      aria-label={`Enviar mensaje posventa de ${row.Codigo}`}
                     >
-                      {status.posventa ? 'Posventa enviado' : isPostSaleBlocked ? cooldownLabel : 'Mensaje posventa'}
+                      {status.posventa
+                        ? 'Posventa enviado'
+                        : !hasValidVisit
+                          ? 'Completar horario'
+                          : isPostSaleBlocked
+                            ? cooldownLabel
+                            : 'Mensaje posventa'}
                     </Button>
                   </Stack>
                 </TableCell>
@@ -227,6 +318,16 @@ export default function PackagesTable() {
           })}
         </TableBody>
       </Table>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2200}
+        onClose={() => setSnackbar({ open: false, message: '' })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setSnackbar({ open: false, message: '' })}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </TableContainer>
   )
 }
