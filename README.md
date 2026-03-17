@@ -1,5 +1,8 @@
 ![logo-siempre](<./src/assets/logos/logo-siempre.png>)
 # Gestión de avisos Siempre :package: :truck:
+[![QA](https://github.com/agusnarvaez/siempre-app-wp/actions/workflows/qa.yml/badge.svg)](https://github.com/agusnarvaez/siempre-app-wp/actions/workflows/qa.yml)
+[![codecov](https://codecov.io/gh/agusnarvaez/siempre-app-wp/branch/main/graph/badge.svg)](https://codecov.io/gh/agusnarvaez/siempre-app-wp)
+
 ## Descripción :page_facing_up:
 La aplicación de gestión de avisos de entregas de paquetes al cliente para Siempre Logística es una app web que permite a los administradores de Siempre subir un archivo CSV con los datos de los paquetes a entregar, y la aplicación se encarga de generar los links de whatsapp con sus respectivos mensajes para que los clientes puedan ser notificados de la entrega de su paquete.
 ## Requerimientos :gear:
@@ -34,5 +37,30 @@ git clone https://github.com/agusnarvaez/siempre-app-wp
      ```
    - Si el archivo contiene errores, la aplicación no podrá leerlo y se mostrará un mensaje de error con los detalles.
 
-3. Hacer click en el botón "Generar links de whatsapp"
-4. La aplicación generará los links de whatsapp con los mensajes correspondientes y los mostrará en la pantalla en formato de tabla.
+3. Hacer click en el botón "Avanzar" para procesar el CSV.
+4. La aplicación mostrará la tabla con acciones por paquete para notificar y enviar mensaje de posventa.
+
+## Calidad y Tests :white_check_mark:
+
+Scripts disponibles:
+
+```bash
+npm run test
+npm run test:watch
+npm run test:coverage
+npm run test:e2e
+```
+
+Cobertura inicial objetivo (iteración 1):
+
+- Statements: 80%
+- Branches: 80%
+- Functions: 80%
+- Lines: 80%
+- Política: evaluación por archivo (`perFile`) en Vitest.
+
+Estrategia de automatización:
+
+- Unit tests para utilidades y servicios.
+- Integration tests para componentes críticos del flujo.
+- E2E smoke test para validar el camino principal del usuario.

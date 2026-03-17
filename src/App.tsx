@@ -3,17 +3,21 @@ import './App.css'
 import { RouterProvider } from 'react-router-dom'
 import { CSVProvider } from './context/CSVContext';
 import { router } from './router';
+import LoadingOverlay from './components/common/LoadingOverlay'
+import ErrorBoundary from './components/common/ErrorBoundary'
 
 // Importar PackagesForm de manera lazy
 
 function App() {
 
   return (
-    <CSVProvider>
-        <Suspense fallback={<h1>Cargando...</h1>}>
-            <RouterProvider router={router} />
-        </Suspense>
-    </CSVProvider>
+    <ErrorBoundary>
+      <CSVProvider>
+          <Suspense fallback={<LoadingOverlay />}>
+              <RouterProvider router={router} />
+          </Suspense>
+      </CSVProvider>
+    </ErrorBoundary>
   )
 }
 
