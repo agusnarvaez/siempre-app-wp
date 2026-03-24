@@ -6,8 +6,6 @@ import { router } from './router';
 import LoadingOverlay from './components/common/LoadingOverlay'
 import ErrorBoundary from './components/common/ErrorBoundary'
 
-// Importar PackagesForm de manera lazy
-
 function App() {
 
   return (
