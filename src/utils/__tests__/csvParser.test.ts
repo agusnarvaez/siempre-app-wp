@@ -16,11 +16,11 @@ describe('csvParser', () => {
     ], 2)
 
     expect(result).toEqual({
-      error: 'No se encontró la fila de encabezado (Codigo, Cliente...)',
+      error: 'No se encontro una fila de encabezado valida',
     })
   })
 
-  it('retorna error cuando faltan columnas requeridas', () => {
+  it('retorna error cuando faltan columnas requeridas en el formato de ruta', () => {
     const result = parseCSVRows([
       ['Codigo', 'Cliente', 'Servicio', 'Destinatario', 'Telefono', 'Direccion', 'Referencia', 'Bultos', 'Estado'],
       ['A1', 'Cliente Uno', 'Express', 'Juan', '1122334455', 'Calle 123', 'Porton', '1', 'Pendiente'],
@@ -60,6 +60,7 @@ describe('csvParser', () => {
         Cliente: 'Cliente Tres',
         Destinatario: 'Pedro',
         VisitaEstimada: '09:30',
+        RangoHorario: '',
         timeRange: 4,
       })
     }
@@ -102,8 +103,45 @@ describe('csvParser', () => {
         Referencia: '',
         Bultos: '',
         VisitaEstimada: '11:11',
+        RangoHorario: '',
         Estado: '',
       })
+    }
+  })
+
+  it('parsea el formato generico y muestra CORREO como rango horario', () => {
+    const result = parseCSVRows([
+      ['', 'CELULAR', 'CORREO', 'CALLE', 'ALTURA', 'LOCALIDAD', 'PARTIDO', 'PROVINCIA', 'PISO/DEPTO', 'OBSERVACIONES'],
+      ['Ana Perez', '1133344455', '10 a 12', 'Av Siempre Viva', '742', 'CABA', 'Comuna 1', 'Buenos Aires', '2A', 'Timbre roto'],
+    ], 2)
+
+    expect('error' in result).toBe(false)
+    if (!('error' in result)) {
+      expect(result.missingVisitCount).toBe(0)
+      expect(result.data[0]).toMatchObject({
+        Codigo: 'GEN-1',
+        Cliente: 'Ana Perez',
+        Destinatario: 'Ana Perez',
+        Telefono: '1133344455',
+        Direccion: 'Av Siempre Viva, 742, 2A, CABA, Comuna 1, Buenos Aires',
+        Referencia: 'Timbre roto',
+        RangoHorario: '10 a 12',
+        VisitaEstimada: '',
+      })
+    }
+  })
+
+  it('cuenta registros genericos sin rango horario en la columna CORREO', () => {
+    const result = parseCSVRows([
+      ['', 'CELULAR', 'CORREO', 'CALLE', 'ALTURA', 'LOCALIDAD', 'PROVINCIA'],
+      ['Luis Perez', '1133344455', '', 'Calle Uno', '1', 'CABA', 'Buenos Aires'],
+    ], 2)
+
+    expect('error' in result).toBe(false)
+    if (!('error' in result)) {
+      expect(result.missingVisitCount).toBe(1)
+      expect(result.data[0].Cliente).toBe('Luis Perez')
+      expect(result.data[0].RangoHorario).toBe('')
     }
   })
 })

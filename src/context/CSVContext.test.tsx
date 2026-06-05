@@ -23,6 +23,7 @@ function ConsumerProbe() {
               Referencia: 'Puerta',
               Bultos: '1',
               VisitaEstimada: '10:30',
+              RangoHorario: '',
               Estado: 'Pendiente',
               timeRange: 2,
             },

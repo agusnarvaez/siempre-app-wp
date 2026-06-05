@@ -16,7 +16,11 @@ import {
   Snackbar,
   Alert,
   TextField,
+  Box,
 } from '@mui/material'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import RateReviewIcon from '@mui/icons-material/RateReview'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { MessageCategory } from '../../data/templates'
 import {
   getNextTemplate,
@@ -58,7 +62,7 @@ export default function PackagesTable() {
     open: false,
     message: '',
   })
-  const [visitDraftByIndex, setVisitDraftByIndex] = useState<Record<number, string>>({})
+  const [timeRangeDraftByIndex, setTimeRangeDraftByIndex] = useState<Record<number, string>>({})
 
   // efecto para disminuir el contador cada segundo
   useEffect(() => {
@@ -100,6 +104,16 @@ export default function PackagesTable() {
     return `${visitaEstimada} a ${endHoursStr}:${endMinutesStr}`
   }
 
+  function getTimeRangeString(row: CSVRowData): string {
+    const explicitRange = row.RangoHorario.trim()
+    if (explicitRange) return explicitRange
+    return buildTimeRangeString(row.VisitaEstimada, row.timeRange)
+  }
+
+  function hasUsableTimeRange(row: CSVRowData): boolean {
+    return row.RangoHorario.trim() !== '' || isValidEstimatedVisit(row.VisitaEstimada)
+  }
+
   /**
    * Construye el link de WhatsApp con el mensaje personalizado.
    * @param row Fila de la tabla (CSVRowData).
@@ -107,7 +121,7 @@ export default function PackagesTable() {
     // 🧠 Generador de link con plantilla aleatoria
   const buildWhatsappLink = (row: CSVRowData, category: MessageCategory): string => {
     const saludo = getGreeting()
-    const timeRangeStr = buildTimeRangeString(row.VisitaEstimada, row.timeRange)
+    const timeRangeStr = getTimeRangeString(row)
     const plantilla = getNextTemplate(category, row.Telefono)
 
     // 🧠 Reemplazamos manualmente las variables dentro del texto
@@ -146,10 +160,10 @@ export default function PackagesTable() {
   const handleSendMessage = (row: CSVRowData, index: number, category: MessageCategory) => {
     if (blocked) return
 
-    if (!isValidEstimatedVisit(row.VisitaEstimada)) {
+    if (!hasUsableTimeRange(row)) {
       setSnackbar({
         open: true,
-        message: 'Completa primero la visita estimada para poder enviar mensajes.',
+        message: 'Completa primero el rango horario para poder enviar mensajes.',
       })
       return
     }
@@ -179,24 +193,30 @@ export default function PackagesTable() {
     return `Posventa en ${hoursLeft}h`
   }
 
-  const saveVisitEstimated = (index: number) => {
-    const draft = (visitDraftByIndex[index] || '').trim()
-    if (!isValidEstimatedVisit(draft)) {
+  const handleLoadAnotherList = () => {
+    setCSVData([])
+    navigate('/')
+  }
+
+  const saveTimeRange = (index: number) => {
+    const draft = (timeRangeDraftByIndex[index] || '').trim()
+    if (!draft) {
       setSnackbar({
         open: true,
-        message: 'El horario debe tener formato HH:MM (24hs).',
+        message: 'El rango horario es obligatorio.',
       })
       return
     }
 
-    const [h, m] = draft.split(':')
-    const normalized = `${h.padStart(2, '0')}:${m}`
+    const nextValue = isValidEstimatedVisit(draft)
+      ? { VisitaEstimada: `${draft.split(':')[0].padStart(2, '0')}:${draft.split(':')[1]}`, RangoHorario: '' }
+      : { VisitaEstimada: '', RangoHorario: draft }
 
     setCSVData((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, VisitaEstimada: normalized } : row)),
+      prev.map((row, i) => (i === index ? { ...row, ...nextValue } : row)),
     )
 
-    setVisitDraftByIndex((prev) => {
+    setTimeRangeDraftByIndex((prev) => {
       const next = { ...prev }
       delete next[index]
       return next
@@ -204,15 +224,33 @@ export default function PackagesTable() {
 
     setSnackbar({
       open: true,
-      message: `Horario guardado para ${normalized}.`,
+      message: 'Rango horario guardado.',
     })
   }
 
   return (
     <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          p: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Button
+          variant="outlined"
+          startIcon={<UploadFileIcon />}
+          onClick={handleLoadAnotherList}
+          aria-label="Cargar otro listado"
+        >
+          Cargar otro listado
+        </Button>
+      </Box>
       {missingVisitCountFromForm > 0 && (
         <Alert severity="warning" sx={{ m: 2 }}>
-          Se cargaron {missingVisitCountFromForm} registros sin horario valido. Debes completar la visita estimada antes de enviar mensajes.
+          Se cargaron {missingVisitCountFromForm} registros sin rango horario. Debes completarlo antes de enviar mensajes.
         </Alert>
       )}
       <Table>
@@ -228,14 +266,10 @@ export default function PackagesTable() {
           <TableRow>
             <TableCell>Código</TableCell>
             <TableCell>Cliente</TableCell>
-            <TableCell>Servicio</TableCell>
-            <TableCell>Destinatario</TableCell>
             <TableCell>Teléfono</TableCell>
             <TableCell>Dirección</TableCell>
             <TableCell>Referencia</TableCell>
-            <TableCell>Bultos</TableCell>
-            <TableCell>Visita Estimada</TableCell>
-            <TableCell>Estado</TableCell>
+            <TableCell>Rango Horario</TableCell>
             <TableCell>Acciones</TableCell>
           </TableRow>
         </TableHead>
@@ -244,43 +278,39 @@ export default function PackagesTable() {
             const status = notified[index] ?? { aviso: false, posventa: false }
             const cooldownLabel = getCooldownLabel(row, index)
             const isPostSaleBlocked = cooldownLabel !== null
-            const hasValidVisit = isValidEstimatedVisit(row.VisitaEstimada)
+            const hasUsableRange = hasUsableTimeRange(row)
             return (
               <TableRow key={index}>
                 <TableCell>{row.Codigo}</TableCell>
                 <TableCell>{row.Cliente}</TableCell>
-                <TableCell>{row.Servicio}</TableCell>
-                <TableCell>{row.Destinatario}</TableCell>
                 <TableCell>{row.Telefono}</TableCell>
                 <TableCell>{row.Direccion}</TableCell>
                 <TableCell>{row.Referencia}</TableCell>
-                <TableCell>{row.Bultos}</TableCell>
                 <TableCell>
-                  {hasValidVisit ? row.VisitaEstimada : (
+                  {hasUsableRange ? getTimeRangeString(row) : (
                     <Stack direction="row" spacing={1} alignItems="center">
                       <TextField
                         size="small"
-                        placeholder="HH:MM"
-                        value={visitDraftByIndex[index] ?? ''}
+                        placeholder="Rango horario"
+                        value={timeRangeDraftByIndex[index] ?? ''}
                         onChange={(e) =>
-                          setVisitDraftByIndex((prev) => ({
+                          setTimeRangeDraftByIndex((prev) => ({
                             ...prev,
                             [index]: e.target.value,
                           }))
                         }
-                        inputProps={{ maxLength: 5 }}
+                        inputProps={{ maxLength: 40 }}
                       />
                       <Button
                         variant="outlined"
                         size="small"
-                        onClick={() => saveVisitEstimated(index)}
+                        onClick={() => saveTimeRange(index)}
                       >
                         Guardar
                       </Button>
                     </Stack>
                   )}
                 </TableCell>
-                <TableCell>{row.Estado}</TableCell>
                 <TableCell>
                   <Stack direction="column" spacing={1}>
                     {status.aviso ? (
@@ -289,24 +319,26 @@ export default function PackagesTable() {
                       <Button
                         variant="contained"
                         color={blocked ? 'secondary' : 'primary'}
+                        startIcon={<NotificationsActiveIcon />}
                         onClick={() => handleSendMessage(row, index, 'aviso')}
-                        disabled={blocked || !hasValidVisit}
+                        disabled={blocked || !hasUsableRange}
                         aria-label={`Notificar paquete ${row.Codigo}`}
                       >
-                        {!hasValidVisit ? 'Completar horario' : blocked ? `Esperando (${remaining}s)` : 'Notificar'}
+                        {!hasUsableRange ? 'Completar rango' : blocked ? `Esperando (${remaining}s)` : 'Notificar'}
                       </Button>
                     )}
                     <Button
                       variant="outlined"
                       color="warning"
+                      startIcon={<RateReviewIcon />}
                       onClick={() => handleSendMessage(row, index, 'posventa')}
-                      disabled={blocked || isPostSaleBlocked || status.posventa || !hasValidVisit}
+                      disabled={blocked || isPostSaleBlocked || status.posventa || !hasUsableRange}
                       aria-label={`Enviar mensaje posventa de ${row.Codigo}`}
                     >
                       {status.posventa
                         ? 'Posventa enviado'
-                        : !hasValidVisit
-                          ? 'Completar horario'
+                        : !hasUsableRange
+                          ? 'Completar rango'
                           : isPostSaleBlocked
                             ? cooldownLabel
                             : 'Mensaje posventa'}

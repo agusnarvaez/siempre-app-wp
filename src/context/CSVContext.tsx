@@ -12,6 +12,7 @@ export interface CSVRowData {
   Referencia: string
   Bultos: string
   VisitaEstimada: string
+  RangoHorario: string
   Estado: string
   timeRange: number
 }

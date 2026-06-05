@@ -26,6 +26,7 @@ const baseRow: CSVRowData = {
   Referencia: 'Porton gris',
   Bultos: '1',
   VisitaEstimada: '10:00',
+  RangoHorario: '',
   Estado: 'Pendiente',
   timeRange: 2,
 }
@@ -74,9 +75,27 @@ describe('PackagesTable', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 
+  it('permite cargar otro listado desde el header de la tabla', () => {
+    renderTable([baseRow])
+
+    fireEvent.click(screen.getByRole('button', { name: /cargar otro listado/i }))
+
+    expect(mockNavigate).toHaveBeenCalledWith('/')
+    expect(screen.getByText(/No hay paquetes cargados/i)).toBeTruthy()
+  })
+
   it('envia aviso y marca la fila como notificada', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     renderTable([baseRow])
+
+    expect(screen.queryByText('Servicio')).toBeNull()
+    expect(screen.queryByText('Destinatario')).toBeNull()
+    expect(screen.queryByText('Estado')).toBeNull()
+    expect(screen.queryByText('Bultos')).toBeNull()
+    expect(screen.queryByText('Express')).toBeNull()
+    expect(screen.queryByText('Juan Perez')).toBeNull()
+    expect(screen.queryByText('Pendiente')).toBeNull()
+    expect(screen.queryByText('1')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /notificar paquete pkg-1/i }))
 
@@ -108,7 +127,7 @@ describe('PackagesTable', () => {
     vi.useRealTimers()
   })
 
-  it('bloquea envio cuando falta horario y pide completarlo', () => {
+  it('bloquea envio cuando falta rango horario y pide completarlo', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const invalidHourRow: CSVRowData = {
       ...baseRow,
@@ -120,11 +139,11 @@ describe('PackagesTable', () => {
     const notifyBtn = screen.getByRole('button', { name: /notificar paquete pkg-3/i }) as HTMLButtonElement
 
     expect(notifyBtn.disabled).toBe(true)
-    expect(screen.getAllByText(/Completar horario/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Completar rango/i).length).toBeGreaterThan(0)
     expect(openSpy).toHaveBeenCalledTimes(0)
   })
 
-  it('permite guardar horario faltante y luego enviar', () => {
+  it('permite guardar rango horario faltante y luego enviar', () => {
     vi.spyOn(Date.prototype, 'getHours').mockReturnValue(9)
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const invalidHourRow: CSVRowData = {
@@ -135,7 +154,7 @@ describe('PackagesTable', () => {
 
     renderTable([invalidHourRow])
 
-    const input = screen.getByPlaceholderText('HH:MM') as HTMLInputElement
+    const input = screen.getByPlaceholderText('Rango horario') as HTMLInputElement
     fireEvent.change(input, { target: { value: '0:20' } })
     fireEvent.click(screen.getByRole('button', { name: /guardar/i }))
     fireEvent.click(screen.getByRole('button', { name: /notificar paquete pkg-5/i }))
@@ -154,6 +173,39 @@ describe('PackagesTable', () => {
     const firstCall = openSpy.mock.calls[0]
     expect((firstCall[0] as string)).toContain('Buenas%20noches')
   })
+
+  it('usa rango horario explicito cuando viene desde Excel', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    renderTable([{ ...baseRow, Codigo: 'GEN-1', VisitaEstimada: '', RangoHorario: '13 a 15' }])
+
+    expect(screen.getByText('13 a 15')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /notificar paquete gen-1/i }))
+
+    expect(openSpy).toHaveBeenCalledTimes(1)
+    expect((openSpy.mock.calls[0][0] as string)).toContain('13%20a%2015')
+  })
+
+  it('permite guardar un rango horario textual faltante', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const missingRangeRow: CSVRowData = {
+      ...baseRow,
+      Codigo: 'GEN-2',
+      VisitaEstimada: '',
+      RangoHorario: '',
+    }
+
+    renderTable([missingRangeRow])
+
+    const input = screen.getByPlaceholderText('Rango horario') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '14 a 16' } })
+    fireEvent.click(screen.getByRole('button', { name: /guardar/i }))
+    fireEvent.click(screen.getByRole('button', { name: /notificar paquete gen-2/i }))
+
+    expect(openSpy).toHaveBeenCalledTimes(1)
+    expect((openSpy.mock.calls[0][0] as string)).toContain('14%20a%2016')
+  })
+
 
   it('bloquea posventa solo para el registro en cooldown', () => {
     registerMessageSent('posventa', 'PKG-1:0')
@@ -176,7 +228,7 @@ describe('PackagesTable', () => {
     expect(screen.getByText(/Posventa listo para enviar en WhatsApp/i)).toBeTruthy()
   })
 
-  it('muestra error si se intenta guardar un horario invalido', () => {
+  it('muestra error si se intenta guardar rango horario vacio', () => {
     const invalidHourRow: CSVRowData = {
       ...baseRow,
       Codigo: 'PKG-6',
@@ -184,16 +236,16 @@ describe('PackagesTable', () => {
     }
 
     renderTable([invalidHourRow])
-    const input = screen.getByPlaceholderText('HH:MM') as HTMLInputElement
-    fireEvent.change(input, { target: { value: '25:90' } })
+    const input = screen.getByPlaceholderText('Rango horario') as HTMLInputElement
+    fireEvent.change(input, { target: { value: ' ' } })
     fireEvent.click(screen.getByRole('button', { name: /guardar/i }))
 
-    expect(screen.getByText(/El horario debe tener formato HH:MM \(24hs\)/i)).toBeTruthy()
+    expect(screen.getByText(/El rango horario es obligatorio/i)).toBeTruthy()
   })
 
-  it('muestra alerta superior cuando el formulario reporta registros sin horario', () => {
+  it('muestra alerta superior cuando el formulario reporta registros sin rango horario', () => {
     renderTable([baseRow], 2)
 
-    expect(screen.getByText(/Se cargaron 2 registros sin horario valido/i)).toBeTruthy()
+    expect(screen.getByText(/Se cargaron 2 registros sin rango horario/i)).toBeTruthy()
   })
 })
