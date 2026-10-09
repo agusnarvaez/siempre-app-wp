@@ -1,29 +1,47 @@
 import { messageTemplates, MessageCategory } from '../data/templates'
 
-const TEMPLATE_COUNTERS_KEY = 'siempre_template_counters_v1'
+const TEMPLATE_POOL_KEY = 'siempre_template_pool_v1'
 
-type TemplateCounters = Record<string, number>
+type TemplatePools = Partial<Record<MessageCategory, number[]>>
 
-function readCounters(): TemplateCounters {
+function readPools(): TemplatePools {
   try {
-    const raw = localStorage.getItem(TEMPLATE_COUNTERS_KEY)
+    const raw = localStorage.getItem(TEMPLATE_POOL_KEY)
     if (!raw) return {}
-    return JSON.parse(raw) as TemplateCounters
+    return JSON.parse(raw) as TemplatePools
   } catch {
     return {}
   }
 }
 
-function writeCounters(counters: TemplateCounters): void {
+function writePools(pools: TemplatePools): void {
   try {
-    localStorage.setItem(TEMPLATE_COUNTERS_KEY, JSON.stringify(counters))
+    localStorage.setItem(TEMPLATE_POOL_KEY, JSON.stringify(pools))
   } catch {
     // No interrumpimos el flujo si el storage no esta disponible.
   }
 }
 
-function getCounterKey(category: MessageCategory, phone: string): string {
-  return `${category}:${phone}`
+function buildShuffledPool(length: number): number[] {
+  const pool = Array.from({ length }, (_, index) => index)
+
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const current = pool[index]
+    pool[index] = pool[swapIndex]
+    pool[swapIndex] = current
+  }
+
+  return pool
+}
+
+function getValidPool(category: MessageCategory, variantCount: number, pools: TemplatePools): number[] {
+  const storedPool = pools[category] ?? []
+  const validPool = storedPool.filter(
+    (index) => Number.isInteger(index) && index >= 0 && index < variantCount,
+  )
+
+  return validPool.length > 0 ? validPool : buildShuffledPool(variantCount)
 }
 
 export function normalizePhone(phone: string): string {
@@ -31,20 +49,19 @@ export function normalizePhone(phone: string): string {
 }
 
 export function getNextTemplate(category: MessageCategory, phone: string): string {
-  const normalizedPhone = normalizePhone(phone)
+  void phone
   const variants = messageTemplates[category]
 
   if (variants.length === 0) return ''
 
-  const counters = readCounters()
-  const key = getCounterKey(category, normalizedPhone)
-  const currentCount = counters[key] ?? 0
-  const index = currentCount % variants.length
+  const pools = readPools()
+  const pool = getValidPool(category, variants.length, pools)
+  const index = pool.shift()
 
-  counters[key] = currentCount + 1
-  writeCounters(counters)
+  pools[category] = pool
+  writePools(pools)
 
-  return variants[index]
+  return variants[index ?? 0]
 }
 
 export function interpolateTemplate(template: string, values: Record<string, string>): string {
