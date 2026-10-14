@@ -1,0 +1,11 @@
+name: deploy-prod
+# Solo lo dispara release.yml sobre el tag del release (spec 4.4). Sin push: prod sale únicamente del release PR.
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  deploy:
+    uses: agusnarvaez/bapps-workflows/.github/workflows/deploy-vps.yml@v1
+    with: { app: siempre, env: prod, health-url: 'https://siempre.bapps.com.ar/version.json', build-dir: dist }
+    secrets: inherit

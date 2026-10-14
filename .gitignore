@@ -155,3 +155,7 @@ test-results/
 *.njsproj
 *.sln
 *.sw?
+
+# Salidas de Playwright
+playwright-report
+test-results

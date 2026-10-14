@@ -1,0 +1,9 @@
+version: 1
+id: siempre
+kind: site
+stack: [react, vite]
+environments:
+  testing: { url: https://siempre-testing.bapps.com.ar, host: vps, health: /version.json, workflow: deploy-testing.yml }
+  prod: { url: https://siempre.bapps.com.ar, host: vps, health: /version.json, workflow: deploy-prod.yml }
+domains: [bapps.com.ar]
+checks: { security: weekly }

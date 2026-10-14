@@ -1,0 +1,12 @@
+name: ci
+on:
+  pull_request: {}
+  schedule: [{ cron: '0 7 * * 1' }]   # security semanal (checks.security en bapps.yml)
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.event_name == 'pull_request'
+    uses: agusnarvaez/bapps-workflows/.github/workflows/qa.yml@v1
+  security:
+    uses: agusnarvaez/bapps-workflows/.github/workflows/security.yml@v1

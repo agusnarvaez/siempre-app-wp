@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: npm          # pip en repos Python; repetir el bloque si hay los dos
+    directory: /
+    schedule: { interval: weekly, day: monday, time: '06:00', timezone: America/Argentina/Buenos_Aires }
+    cooldown: { default-days: 7 }   # no tomar versiones con menos de una semana
+    groups:
+      menores: { update-types: [minor, patch] }
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions   # mantiene los SHA fijados y su comentario de tag
+    directory: /
+    schedule: { interval: weekly, day: monday, time: '06:00', timezone: America/Argentina/Buenos_Aires }
+    cooldown: { default-days: 7 }
