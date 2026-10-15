@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-13
+reason = "braces 3.0.3 (solo dev, dependencia transitiva de tooling de lint/test) sin versión corregida publicada. No se incluye en el build ni corre con entrada no confiable. Revisar cuando salga el fix."
