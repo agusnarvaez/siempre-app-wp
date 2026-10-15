@@ -1,0 +1,9 @@
+name: release
+on:
+  push: { branches: [main] }
+permissions:
+  contents: read
+jobs:
+  release:
+    permissions: { contents: write, pull-requests: write, issues: write, actions: write }
+    uses: agusnarvaez/bapps-workflows/.github/workflows/release.yml@v1
