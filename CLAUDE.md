@@ -45,3 +45,12 @@ npm run test:e2e
 1. Add a dedicated import schema validator with clearer user-facing error messages.
 2. Centralize route constants to avoid hardcoded path drift.
 3. Expand e2e coverage beyond the smoke path once the happy flow is fully stable.
+
+<!-- dotclaude -->
+## Harness: dotclaude
+
+Este repo se trabaja con la config de Claude Code / Codex de [agusnarvaez/dotclaude](https://github.com/agusnarvaez/dotclaude)
+(privado): reglas compartidas, headroom (compresión de contexto) y graphify (grafo de código).
+
+- PC nueva: `gh repo clone agusnarvaez/dotclaude ~/.claude-sync && bash ~/.claude-sync/bin/bootstrap.sh`
+- Verificar: `headroom doctor`. Las reglas globales viven en `~/.claude/rules/` (Codex: `~/.codex/AGENTS.md`).
