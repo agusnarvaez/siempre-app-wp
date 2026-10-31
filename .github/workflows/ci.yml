@@ -10,3 +10,16 @@ jobs:
     uses: agusnarvaez/bapps-workflows/.github/workflows/qa.yml@v1
   security:
     uses: agusnarvaez/bapps-workflows/.github/workflows/security.yml@v1
+
+  automerge:   # Dependabot patch/minor: se mergea solo si qa (lint, test, build) pasó; los major y los de Actions quedan a mano
+    needs: qa
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ${{ vars.BAPPS_RUNNER || 'ubuntu-latest' }}
+    permissions: { contents: write, pull-requests: write }
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      # ponytail: GITHUB_TOKEN no puede tocar .github/workflows, por eso github_actions queda afuera
+      - if: contains(fromJSON('["version-update:semver-patch","version-update:semver-minor"]'), steps.meta.outputs.update-type) && steps.meta.outputs.package-ecosystem != 'github_actions'
+        run: gh pr merge --squash "$PR"
+        env: { PR: '${{ github.event.pull_request.html_url }}', GH_TOKEN: '${{ github.token }}' }

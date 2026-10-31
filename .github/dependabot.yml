@@ -6,6 +6,7 @@ updates:
     cooldown: { default-days: 7 }   # no tomar versiones con menos de una semana
     groups:
       menores: { update-types: [minor, patch] }
+      seguridad: { applies-to: security-updates, patterns: ['*'] }   # un PR de seguridad por repo, no uno por paquete
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions   # mantiene los SHA fijados y su comentario de tag
     directory: /
