@@ -8,6 +8,8 @@ updates:
       menores: { update-types: [minor, patch] }
       seguridad: { applies-to: security-updates, patterns: ['*'] }   # un PR de seguridad por repo, no uno por paquete
     open-pull-requests-limit: 5
+    ignore:   # los major van por tanda, a mano (bapps-console, rollout Anexo C.1); update-types no frena los de seguridad
+      - { dependency-name: '*', update-types: [version-update:semver-major] }
   - package-ecosystem: github-actions   # mantiene los SHA fijados y su comentario de tag
     directory: /
     schedule: { interval: weekly, day: monday, time: '06:00', timezone: America/Argentina/Buenos_Aires }
