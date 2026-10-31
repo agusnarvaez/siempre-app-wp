@@ -23,7 +23,7 @@
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "6.4.3",
     "@mui/material": "6.4.3",
-    "@mui/x-data-grid": "7.25.0",
+    "@mui/x-data-grid": "9.16.0",
     "papaparse": "5.7.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
