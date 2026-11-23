@@ -7,3 +7,5 @@ environments:
   prod: { url: https://siempre.bapps.com.ar, host: vps, health: /version.json, workflow: deploy-prod.yml }
 domains: [bapps.com.ar]
 checks: { security: weekly }
+# Revisión mensual con IA (bapps-console, Fase 5).
+review: { enabled: true }
