@@ -1,0 +1,8 @@
+version: 2
+secret:
+  ignored_paths:
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/__tests__/**"
+    - "**/fixtures/**"
+    - "**/e2e/**"
